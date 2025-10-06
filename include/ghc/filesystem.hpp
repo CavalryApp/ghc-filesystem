@@ -3090,13 +3090,22 @@ GHC_INLINE path::string_type::size_type path::root_name_length() const noexcept
     }
 #endif
     if (_path.length() > _prefixLength + 2 && _path[_prefixLength] == preferred_separator && _path[_prefixLength + 1] == preferred_separator && _path[_prefixLength + 2] != preferred_separator && std::isprint(_path[_prefixLength + 2])) {
-        impl_string_type::size_type pos = _path.find(preferred_separator, _prefixLength + 3);
-        if (pos == impl_string_type::npos) {
+        auto server_end = _path.find(preferred_separator, _prefixLength + 2);
+        if (server_end == impl_string_type::npos) {
             return _path.length();
         }
-        else {
-            return pos;
+
+        auto share_start = server_end + 1;
+        if (share_start >= _path.length() || _path[share_start] == preferred_separator) {
+            return server_end;
         }
+
+        auto share_end = _path.find(preferred_separator, share_start);
+        if (share_end == impl_string_type::npos) {
+            return _path.length();
+        }
+
+        return share_end;
     }
     return 0;
 }
