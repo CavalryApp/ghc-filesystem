@@ -4651,8 +4651,10 @@ GHC_INLINE void last_write_time(const path& p, file_time_type new_time, std::err
         ec = detail::make_system_error();
     }
 #elif defined(GHC_OS_MACOS) && \
-    (__MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_13) || (__IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_11_0) || \
-    (__TV_OS_VERSION_MIN_REQUIRED < __TVOS_11_0) || (__WATCH_OS_VERSION_MIN_REQUIRED < __WATCHOS_4_0)
+    ((defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && (__MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_13)) || \
+     (defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && (__IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_11_0)) || \
+     (defined(__TV_OS_VERSION_MIN_REQUIRED) && (__TV_OS_VERSION_MIN_REQUIRED < __TVOS_11_0)) || \
+     (defined(__WATCH_OS_VERSION_MIN_REQUIRED) && (__WATCH_OS_VERSION_MIN_REQUIRED < __WATCHOS_4_0)))
     struct ::stat fs;
     if (::stat(p.c_str(), &fs) == 0) {
         struct ::timeval tv[2];
