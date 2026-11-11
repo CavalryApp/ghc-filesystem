@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.7.2)
-project(
-   ghcfilesystem,
-   VERSION 1.5.14
-)
+project(ghcfilesystem VERSION 1.5.16)
 
 if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
@@ -35,9 +32,11 @@ endif()
 if(CMAKE_CXX_STANDARD LESS 11)
     message(FATAL_ERROR "CMAKE_CXX_STANDARD is less than 11, ghc::filesystem only works with C++11 and above.")
 endif()
-message(STATUS "System name: ${CMAKE_SYSTEM_NAME}")
-message(STATUS "Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
-message(STATUS "CMAKE_CXX_COMPILE_FEATURES: ${CMAKE_CXX_COMPILE_FEATURES}")
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    message(STATUS "System name: ${CMAKE_SYSTEM_NAME}")
+    message(STATUS "Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+    message(STATUS "CMAKE_CXX_COMPILE_FEATURES: ${CMAKE_CXX_COMPILE_FEATURES}")
+endif()
 
 add_library(ghc_filesystem INTERFACE)
 add_library(ghcFilesystem::ghc_filesystem ALIAS ghc_filesystem)

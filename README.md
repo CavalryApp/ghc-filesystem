@@ -4,7 +4,7 @@
 [![Build Status](https://ci.appveyor.com/api/projects/status/t07wp3k2cddo0hpo/branch/master?svg=true)](https://ci.appveyor.com/project/gulrak/filesystem)
 [![Build Status](https://api.cirrus-ci.com/github/gulrak/filesystem.svg?branch=master)](https://cirrus-ci.com/github/gulrak/filesystem)
 [![Coverage Status](https://coveralls.io/repos/github/gulrak/filesystem/badge.svg?branch=master)](https://coveralls.io/github/gulrak/filesystem?branch=master)
-[![Latest Release Tag](https://img.shields.io/github/tag/gulrak/filesystem.svg)](https://github.com/gulrak/filesystem/tree/v1.5.14)
+[![Latest Release Tag](https://img.shields.io/github/tag/gulrak/filesystem.svg)](https://github.com/gulrak/filesystem/tree/v1.5.16)
 <!-- [![Build Status](https://cloud.drone.io/api/badges/gulrak/filesystem/status.svg?ref=refs/heads/master)](https://cloud.drone.io/gulrak/filesystem) -->
 
 
@@ -40,17 +40,19 @@
 # Filesystem
 
 This is a header-only single-file `std::filesystem` compatible helper library,
-based on the C++17 and C++20 specs, but implemented for C++11, C++14, C++17 or C++20
-(tightly following  the C++17 standard with very few documented exceptions). It is currently tested on
-macOS 10.12/10.14/10.15/11.6, Windows 10, Ubuntu 18.04, Ubuntu 20.04, CentOS 7, CentOS 8, FreeBSD 12,
-Alpine ARM/ARM64 Linux and Solaris 10 but should work on other systems too, as long as you have
-at least a C++11 compatible compiler. It should work with Android NDK, Emscripten and I even
-had reports of it being used on iOS (within sandboxing constraints) and with v1.5.6 there
-is experimental support for QNX. The support of Android NDK, Emscripten, QNX, and since 1.5.14
-GNU/Hurd and Haiku is not backed up by automated testing but PRs and bug reports are welcome
-for those too and they are reported to work.
-It is of course in its own namespace `ghc::filesystem` to not interfere with a regular `std::filesystem`
-should you use it in a mixed C++17 environment (which is possible).
+based on the C++17 and C++20 specifications, but implemented for C++11, C++14,
+C++17, and C++20. It closely follows the C++17 standard with a few documented
+exceptions.
+
+Automated CI currently covers macOS, Windows, Ubuntu, Rocky Linux, and FreeBSD,
+including both current and legacy compiler toolchains. The library has also
+been reported to work on Android, iOS, Emscripten, QNX, GNU/Hurd, Haiku,
+Solaris, and other Unix-like systems, but those platforms are not continuously
+tested. PRs that allow testing any of those are welcome.
+
+It is of course in its own namespace `ghc::filesystem` to not interfere with a
+regular `std::filesystem` should you use it in a mixed C++17 environment
+(which is possible).
 
 *Test coverage is well above 90%, and starting with v1.3.6 and in v1.5.0
 more time was invested in benchmarking and optimizing parts of the library. I'll try
@@ -90,39 +92,42 @@ to do with Haskell**, sorry for the name clash).
 
 ## Platforms
 
-`ghc::filesystem` is developed on macOS but CI tested on macOS, Windows,
-various Linux Distributions, FreeBSD and starting with v1.5.12 on Solaris.
-It should work on any of these with a C++11-capable  compiler. Also there are some
-checks to hopefully better work on Android, but  as I currently don't test with the
-Android NDK, I wouldn't call it a  supported platform yet, same is valid for using
-it with Emscripten. It is now  part of the detected platforms, I fixed the obvious
-issues and ran some tests with  it, so it should be fine. All in all, I don't see it
-replacing `std::filesystem` where full C++17 or C++20 is available, it doesn't try
-to be a "better" `std::filesystem`, just an almost drop-in if you can't use it
-(with the exception  of the UTF-8 preference).
+`ghc::filesystem` is developed on macOS and continuously tested using GitHub
+Actions, AppVeyor, and Cirrus CI. The current automated matrix includes:
+
+* macOS 14 and 15 on Apple Silicon with AppleClang
+* Windows with Visual Studio 2015, 2017, 2019, and 2022 toolchains, including
+  the MSVC v142 toolset
+* Windows MSYS2 with MinGW64 GCC, UCRT64 GCC, and Clang64
+* Ubuntu 22.04 and 24.04 with GCC 11-13 and Clang 15/18
+* Legacy Docker builds with GCC 5-8 and Clang 6-9
+* Rocky Linux 8 and 9
+* FreeBSD 14
+
+Modern CI jobs exercise C++11, C++17, and C++20 where supported. Platforms not
+listed above may still work, but are not covered by the current automated test
+matrix.
+
+People use it on Android, iOS, Emscripten, QNX, GNU/Hurd, Haiku, Solaris, and
+other Unix-like systems but continous CI coverage is missing.
+
+It _should_ work on any Windows or POSIX platform with a C++11-capable  compiler. 
+All in all, I don't see it replacing `std::filesystem` where full C++17 or C++20
+is available, it doesn't try to be a "better" `std::filesystem`, just an almost
+drop-in if you can't use it (with the exception  of the UTF-8 preference).
 
 :information_source: **Important:** _This implementation is following the ["UTF-8 Everywhere" philosophy](https://utf8everywhere.org/) in that all
 `std::string` instances will be interpreted the same as `std::u8string` encoding
 wise and as being in UTF-8. The `std::u16string` will be seen as UTF-16. See *Differences in API*
 for more information._
 
-Unit tests are currently run with:
-
-* macOS 10.12: Xcode 9.2 (clang-900.0.39.2), GCC 9.2, Clang 9.0, macOS 10.13: Xcode 10.1, macOS 10.14: Xcode 11.2, macOS 10.15: Xcode 11.6, Xcode 12.4
-* Windows: Visual Studio 2017, Visual Studio 2015, Visual Studio 2019, MinGW GCC 6.3 (Win32), GCC 7.2 (Win64), Cygwin GCC 10.2 (no CI yet)
-* Linux (Ubuntu): GCC (5.5, 6.5, 7.4, 8.3, 9.2), Clang (5.0, 6.0, 7.1, 8.0, 9.0)
-* ~~Linux (Alpine ARM/ARM64): GCC 9.2.0~~ (The Drone build scripts stopped working,
-  as they where a contribution, I couldn't figure out what went wrong, any help appreciated.)
-* FreeBSD: Clang 8.0
-* Solaris: GCC 5.5 
-
 
 ## Tests
 
 The header comes with a set of unit-tests and uses [CMake](https://cmake.org/)
 as a build tool and [Catch2](https://github.com/catchorg/Catch2) as test framework.
-All tests are registered with in CMake, so the [ctest](https://cmake.org/cmake/help/latest/manual/ctest.1.html)
-commando can be used to run the tests. 
+All tests are registered with CMake, so the [ctest](https://cmake.org/cmake/help/latest/manual/ctest.1.html)
+command can be used to run the tests. 
 
 All tests against this implementation should succeed, depending on your environment
 it might be that there are some warnings, e.g. if you have no rights to create
@@ -154,8 +159,8 @@ in the standard, and there might be issues in these implementations too.
 
 ### Downloads
 
-The latest release version is [v1.5.14](https://github.com/gulrak/filesystem/tree/v1.5.14) and
-source archives can be found [here](https://github.com/gulrak/filesystem/releases/tag/v1.5.14).
+The latest release version is [v1.5.16](https://github.com/gulrak/filesystem/tree/v1.5.16) and
+source archives can be found [here](https://github.com/gulrak/filesystem/releases/tag/v1.5.16).
 
 The latest pre-native-backend version is [v1.4.0](https://github.com/gulrak/filesystem/tree/v1.4.0) and
 source archives can be found [here](https://github.com/gulrak/filesystem/releases/tag/v1.4.0).
@@ -176,60 +181,84 @@ Everything is in the namespace `ghc::filesystem`, so one way to use it only as
 a fallback could be:
 
 ```cpp
-#ifdef __APPLE__
-#include <Availability.h> // for deployment target to support pre-catalina targets without std::fs 
+#if _MSVC_LANG >= 201703L || __cplusplus >= 201703L && defined(__has_include)
+    // ^ Supports MSVC prior to 15.7 without setting /Zc:__cplusplus to fix __cplusplus
+    // _MSVC_LANG works regardless. But without the switch, the compiler always reported 199711L: https://blogs.msdn.microsoft.com/vcblog/2018/04/09/msvc-now-correctly-reports-__cplusplus/
+    #if __has_include(<filesystem>) // Two stage __has_include needed for MSVC 2015 and per https://gcc.gnu.org/onlinedocs/cpp/_005f_005fhas_005finclude.html
+        #define GHC_USE_STD_FS
+
+        // Old Apple OSs don't support std::filesystem, though the header is available at compile
+        // time. In particular, std::filesystem is unavailable before macOS 10.15, iOS/tvOS 13.0,
+        // and watchOS 6.0.
+        #ifdef __APPLE__
+            #include <Availability.h>
+            // Note: This intentionally uses std::filesystem on any new Apple OS, like visionOS
+            // released after std::filesystem, where std::filesystem is always available.
+            // (All other __<platform>_VERSION_MIN_REQUIREDs will be undefined and thus 0.)
+            #if __MAC_OS_X_VERSION_MIN_REQUIRED && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500 \
+             || __IPHONE_OS_VERSION_MIN_REQUIRED && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __TV_OS_VERSION_MIN_REQUIRED && __TV_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __WATCH_OS_VERSION_MAX_ALLOWED && __WATCH_OS_VERSION_MAX_ALLOWED < 60000
+                #undef GHC_USE_STD_FS
+            #endif  
+        #endif
+    #endif
 #endif
-#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || (defined(__cplusplus) && __cplusplus >= 201703L)) && defined(__has_include)
-#if __has_include(<filesystem>) && (!defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500)
-#define GHC_USE_STD_FS
-#include <filesystem>
-namespace fs = std::filesystem;
-#endif
-#endif
-#ifndef GHC_USE_STD_FS
-#include <ghc/filesystem.hpp>
-namespace fs = ghc::filesystem;
+
+#ifdef GHC_USE_STD_FS
+    #include <filesystem>
+    namespace fs = std::filesystem;
+#else
+    #include "filesystem.hpp"
+    namespace fs = ghc::filesystem;
 #endif
 ```
-
-**Note that this code uses a two-stage preprocessor condition because Visual Studio 2015
-doesn't like the `(<...>)` syntax, even if it could cut evaluation early before. This code also
-used the minimum deployment target to detect if `std::filesystem` really is available on macOS
-compilation.**
-
-**Note also, this detection now works on MSVC versions prior to 15.7 on, or without setting
-the `/Zc:__cplusplus` compile switch that would fix `__cplusplus` on MSVC. (Without the switch
-the compiler always reports `199711L`
-([see](https://blogs.msdn.microsoft.com/vcblog/2018/04/09/msvc-now-correctly-reports-__cplusplus/)),
-but `_MSVC_LANG` works without it.**
 
 If you want to also use the `fstream` wrapper with `path` support as fallback,
 you might use:
 
 ```cpp
-#ifdef __APPLE__
-#include <Availability.h> // for deployment target to support pre-catalina targets without std::fs 
+#if _MSVC_LANG >= 201703L || __cplusplus >= 201703L && defined(__has_include)
+    // ^ Supports MSVC prior to 15.7 without setting /Zc:__cplusplus to fix __cplusplus
+    // _MSVC_LANG works regardless. But without the switch, the compiler always reported 199711L: https://blogs.msdn.microsoft.com/vcblog/2018/04/09/msvc-now-correctly-reports-__cplusplus/
+    #if __has_include(<filesystem>) // Two stage __has_include needed for MSVC 2015 and per https://gcc.gnu.org/onlinedocs/cpp/_005f_005fhas_005finclude.html
+        #define GHC_USE_STD_FS
+
+        // Old Apple OSs don't support std::filesystem, though the header is available at compile
+        // time. In particular, std::filesystem is unavailable before macOS 10.15, iOS/tvOS 13.0,
+        // and watchOS 6.0.
+        #ifdef __APPLE__
+            #include <Availability.h>
+            // Note: This intentionally uses std::filesystem on any new Apple OS, like visionOS
+            // released after std::filesystem, where std::filesystem is always available.
+            // (All other __<platform>_VERSION_MIN_REQUIREDs will be undefined and thus 0.)
+            #if __MAC_OS_X_VERSION_MIN_REQUIRED && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500 \
+             || __IPHONE_OS_VERSION_MIN_REQUIRED && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __TV_OS_VERSION_MIN_REQUIRED && __TV_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __WATCH_OS_VERSION_MAX_ALLOWED && __WATCH_OS_VERSION_MAX_ALLOWED < 60000
+                #undef GHC_USE_STD_FS
+            #endif  
+        #endif
+    #endif
 #endif
-#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || (defined(__cplusplus) && __cplusplus >= 201703L)) && defined(__has_include)
-#if __has_include(<filesystem>) && (!defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500)
-#define GHC_USE_STD_FS
-#include <filesystem>
-namespace fs {
-using namespace std::filesystem;
-using ifstream = std::ifstream;
-using ofstream = std::ofstream;
-using fstream = std::fstream;
-}
-#endif
-#endif
-#ifndef GHC_USE_STD_FS
-#include <ghc/filesystem.hpp>
-namespace fs {
-using namespace ghc::filesystem;
-using ifstream = ghc::filesystem::ifstream;
-using ofstream = ghc::filesystem::ofstream;
-using fstream = ghc::filesystem::fstream;
-}
+
+#ifdef GHC_USE_STD_FS
+    #include <filesystem>
+    #include <fstream>
+    namespace fs {
+        using namespace std::filesystem;
+        using ifstream = std::ifstream;
+        using ofstream = std::ofstream;
+        using fstream = std::fstream;
+    }
+#else
+    #include "filesystem.hpp"
+    namespace fs {
+        using namespace ghc::filesystem;
+        using ifstream = ghc::filesystem::ifstream;
+        using ofstream = ghc::filesystem::ofstream;
+        using fstream = ghc::filesystem::fstream;
+    }
 #endif
 ```
 
@@ -269,29 +298,47 @@ If you use the forwarding/implementation approach, you can still use the dynamic
 switching like this:
 
 ```cpp
-#ifdef __APPLE__
-#include <Availability.h> // for deployment target to support pre-catalina targets without std::fs
+#if _MSVC_LANG >= 201703L || __cplusplus >= 201703L && defined(__has_include)
+    // ^ Supports MSVC prior to 15.7 without setting /Zc:__cplusplus to fix __cplusplus
+    // _MSVC_LANG works regardless. But without the switch, the compiler always reported 199711L: https://blogs.msdn.microsoft.com/vcblog/2018/04/09/msvc-now-correctly-reports-__cplusplus/
+    #if __has_include(<filesystem>) // Two stage __has_include needed for MSVC 2015 and per https://gcc.gnu.org/onlinedocs/cpp/_005f_005fhas_005finclude.html
+        #define GHC_USE_STD_FS
+
+        // Old Apple OSs don't support std::filesystem, though the header is available at compile
+        // time. In particular, std::filesystem is unavailable before macOS 10.15, iOS/tvOS 13.0,
+        // and watchOS 6.0.
+        #ifdef __APPLE__
+            #include <Availability.h>
+            // Note: This intentionally uses std::filesystem on any new Apple OS, like visionOS
+            // released after std::filesystem, where std::filesystem is always available.
+            // (All other __<platform>_VERSION_MIN_REQUIREDs will be undefined and thus 0.)
+            #if __MAC_OS_X_VERSION_MIN_REQUIRED && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500 \
+             || __IPHONE_OS_VERSION_MIN_REQUIRED && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __TV_OS_VERSION_MIN_REQUIRED && __TV_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __WATCH_OS_VERSION_MAX_ALLOWED && __WATCH_OS_VERSION_MAX_ALLOWED < 60000
+                #undef GHC_USE_STD_FS
+            #endif  
+        #endif
+    #endif
 #endif
-#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || (defined(__cplusplus) && __cplusplus >= 201703L)) && defined(__has_include)
-#if __has_include(<filesystem>) && (!defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500)
-#define GHC_USE_STD_FS
-#include <filesystem>
-namespace fs {
-using namespace std::filesystem;
-using ifstream = std::ifstream;
-using ofstream = std::ofstream;
-using fstream = std::fstream;
-}
-#endif
-#endif
-#ifndef GHC_USE_STD_FS
-#include <ghc/fs-fwd.hpp>
-namespace fs {
-using namespace ghc::filesystem;
-using ifstream = ghc::filesystem::ifstream;
-using ofstream = ghc::filesystem::ofstream;
-using fstream = ghc::filesystem::fstream;
-}
+
+#ifdef GHC_USE_STD_FS
+    #include <filesystem>
+    #include <fstream>
+    namespace fs {
+        using namespace std::filesystem;
+        using ifstream = std::ifstream;
+        using ofstream = std::ofstream;
+        using fstream = std::fstream;
+    }
+#else
+    #include "fs_fwd.hpp"
+    namespace fs {
+        using namespace ghc::filesystem;
+        using ifstream = ghc::filesystem::ifstream;
+        using ofstream = ghc::filesystem::ofstream;
+        using fstream = ghc::filesystem::fstream;
+    }
 #endif
 ```
 
@@ -299,25 +346,38 @@ and in the implementation hiding cpp, you might use (before any include that inc
 to take precedence:
 
 ```cpp
-#ifdef __APPLE__ // for deployment target to support pre-catalina targets without std::fs 
-#include <Availability.h>
+#if _MSVC_LANG >= 201703L || __cplusplus >= 201703L && defined(__has_include)
+    // ^ Supports MSVC prior to 15.7 without setting /Zc:__cplusplus to fix __cplusplus
+    // _MSVC_LANG works regardless. But without the switch, the compiler always reported 199711L: https://blogs.msdn.microsoft.com/vcblog/2018/04/09/msvc-now-correctly-reports-__cplusplus/
+    #if __has_include(<filesystem>) // Two stage __has_include needed for MSVC 2015 and per https://gcc.gnu.org/onlinedocs/cpp/_005f_005fhas_005finclude.html
+        #define GHC_USE_STD_FS
+
+        // Old Apple OSs don't support std::filesystem, though the header is available at compile
+        // time. In particular, std::filesystem is unavailable before macOS 10.15, iOS/tvOS 13.0,
+        // and watchOS 6.0.
+        #ifdef __APPLE__
+            #include <Availability.h>
+            // Note: This intentionally uses std::filesystem on any new Apple OS, like visionOS
+            // released after std::filesystem, where std::filesystem is always available.
+            // (All other __<platform>_VERSION_MIN_REQUIREDs will be undefined and thus 0.)
+            #if __MAC_OS_X_VERSION_MIN_REQUIRED && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500 \
+             || __IPHONE_OS_VERSION_MIN_REQUIRED && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __TV_OS_VERSION_MIN_REQUIRED && __TV_OS_VERSION_MIN_REQUIRED < 130000 \
+             || __WATCH_OS_VERSION_MAX_ALLOWED && __WATCH_OS_VERSION_MAX_ALLOWED < 60000
+                #undef GHC_USE_STD_FS
+            #endif  
+        #endif
+    #endif
 #endif
-#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || (defined(__cplusplus) && __cplusplus >= 201703L)) && defined(__has_include)
-#if __has_include(<filesystem>) && (!defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500)
-#define GHC_USE_STD_FS
-#endif
-#endif
+
 #ifndef GHC_USE_STD_FS
-#define GHC_FILESYSTEM_IMPLEMENTATION
-#include <ghc/filesystem.hpp>
+    #include "fs_impl.hpp"
 #endif
 ```
 
 :information_source: **Hint:** There are additional helper headers, named `ghc/fs_std_fwd.hpp` and
 `ghc/fs_std_impl.hpp` that use this technique, so you can simply include them
-if you want to dynamically select the filesystem implementation. they also
-enable the `wchar_t` support on `ghc::filesystem` on Windows, so the resulting
-implementation in the `fs` namespace will be compatible.
+if you want to dynamically select the filesystem implementation.
 
 
 
@@ -343,6 +403,10 @@ The `CMakeLists.txt` offers a few options to customize its behavior:
 * `GHC_FILESYSTEM_TEST_COMPILE_FEATURES` can be set to a list of features to override
   `CMAKE_CXX_COMPILE_FEATURES` when the detection of C++17 or C++20 for additional tests
   is not working (e.g. `cxx_std_20` to enforce building a `filesystem_test_cpp20` with C++20).
+
+### Bazel
+
+Please use [hedronvision/bazel-cc-filesystem-backport](https://github.com/hedronvision/bazel-cc-filesystem-backport), which will automatically set everything up for you.
 
 ### Versioning
 
@@ -409,7 +473,7 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    // now use argc/argv as usual, they have utf-8 enconding on windows
+    // now use argc/argv as usual, they have utf-8 encoding on windows
     // ...
 
     return 0;
@@ -467,7 +531,7 @@ C++11/14. Starting with v1.1.0 these are supported when compiling
 `ghc::filesystem` under C++17 of C++20.
 
 Starting with v1.5.2 `ghc::filesystem` will try to allow the use of
-`std::experimental::basic_string_view` where it detects is availability.
+`std::experimental::basic_string_view` where it detects its availability.
 Additionally if you have a `basic_string_view` compatible c++11
 implementation it can be used instead of `std::basic_string_view`
 by defining `GHC_HAS_CUSTOM_STRING_VIEW` and importing the
@@ -574,7 +638,7 @@ the standard.
 As symbolic links on Windows, while being supported more or less since
 Windows Vista (with some strict security constraints) and fully since some earlier
 build of Windows 10, when "Developer Mode" is activated, are at time of writing
-(2018) rarely used, still they are supported wiit th this implementation.
+(2018) rarely used, still they are supported with this implementation.
 
 #### Permissions
 
@@ -588,6 +652,65 @@ to the expected behavior.
 
 
 ## Release Notes
+
+### v1.5.16
+
+* Fix for [#203](https://github.com/gulrak/filesystem/issues/203), directory
+  iteration and `proximate()` are available in builds without exception
+  support, with iteration errors terminating the process.
+* Fix for [#191](https://github.com/gulrak/filesystem/issues/191), appending
+  to a host-only UNC path now inserts the missing separator.
+* Fix for [#170](https://github.com/gulrak/filesystem/issues/170),
+  `lexically_normal()` now preserves IPv6 components in device UNC paths.
+* Fix for [#171](https://github.com/gulrak/filesystem/issues/171), `canonical()`
+  now supports device UNC paths.
+* Fix for [#204](https://github.com/gulrak/filesystem/issues/204),
+  `weakly_canonical()` now propagates component lookup errors.
+* Fix for [#205](https://github.com/gulrak/filesystem/issues/205), `copy_file()`
+  now reports an error for non-regular sources.
+* Fix for [#206](https://github.com/gulrak/filesystem/issues/206), Windows error
+  formatting now handles unknown error codes safely.
+* Fix for [#207](https://github.com/gulrak/filesystem/issues/207),
+  `last_write_time()` now consistently follows symlinks.
+* Fix for [#208](https://github.com/gulrak/filesystem/issues/208), filesystem
+  metadata now preserves subsecond modification times.
+* Fix for [#209](https://github.com/gulrak/filesystem/issues/209), malformed
+  UTF-16 no longer drops subsequent valid code units.
+* Fix for [#210](https://github.com/gulrak/filesystem/issues/210),
+  `equivalent()` now compares only filesystem identity.
+* Fix for [#178](https://github.com/gulrak/filesystem/issues/178), recursive
+  iteration no longer resolves symlinks unless requested.
+* Fix for [#185](https://github.com/gulrak/filesystem/issues/185),
+  `lexically_normal()` now preserves unresolved parent components in relative
+  paths.
+* Pull requests [#198](https://github.com/gulrak/filesystem/pull/198) and
+  [#199](https://github.com/gulrak/filesystem/pull/199), updated CI for current
+  runners and compiler toolchains, retaining legacy compiler and MSVC v142
+  coverage and adding MSYS2 GCC and Clang builds, fixing
+  [#189](https://github.com/gulrak/filesystem/issues/189).
+* Pull requests [#177](https://github.com/gulrak/filesystem/pull/177) and
+  [#197](https://github.com/gulrak/filesystem/pull/197), fixed `EINTR` retry
+  handling in POSIX `read()`, `opendir()` and `readdir()` loops.
+* Avoided unnecessary temporary string creation during Windows directory
+  iteration.
+* Pull request [#190](https://github.com/gulrak/filesystem/pull/190), fixed
+  preprocessor checks for builds using `-Wundef`.
+* Pull request [#188](https://github.com/gulrak/filesystem/pull/188), replaced
+  use of the GNU `getcwd(NULL, 0)` extension.
+* Pull request [#179](https://github.com/gulrak/filesystem/pull/179), fixed
+  `lexically_relative()` when the normalized base equals the target.
+* Pull request [#176](https://github.com/gulrak/filesystem/pull/176), documented
+  the external Bazel rules.
+* Pull request [#174](https://github.com/gulrak/filesystem/pull/174), CMake no
+  longer prints diagnostic messages when used as a subproject.
+* Pull request [#172](https://github.com/gulrak/filesystem/pull/172), allowed
+  wide-path file streams with recent libstdc++ versions on Windows.
+* Pull request [#167](https://github.com/gulrak/filesystem/pull/167), improved
+  dynamic selection and deployment target handling across Apple platforms,
+  fixing [#168](https://github.com/gulrak/filesystem/issues/168).
+* Fix for [#166](https://github.com/gulrak/filesystem/issues/166),
+  `extension()` did return non empty result for the directory name
+  `".."`.
 
 ###  [v1.5.14](https://github.com/gulrak/filesystem/releases/tag/v1.5.14)
 
@@ -1113,4 +1236,3 @@ to the expected behavior.
 
 This was the first public release version. It implements the full range of
 C++17 `std::filesystem`, as far as possible without other C++17 dependencies.
-

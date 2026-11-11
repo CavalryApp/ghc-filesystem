@@ -82,6 +82,7 @@ using fstream = ghc::filesystem::fstream;
 #ifndef GHC_FILESYSTEM_FWD_TEST
 #define CATCH_CONFIG_MAIN
 #endif
+#define CATCH_CONFIG_NO_COUNTER
 #include "catch.hpp"
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -354,11 +355,23 @@ TEST_CASE("fs::detail::toUtf8", "[filesystem][fs.detail.utf8]")
 {
     std::string t;
     CHECK(std::string("\xc3\xa4/\xe2\x82\xac\xf0\x9d\x84\x9e") == fs::detail::toUtf8(std::u16string(u"\u00E4/\u20AC\U0001D11E")));
+    const std::u16string highThenAscii{0xd800, u'A'};
+    const std::u16string lowThenAscii{0xdc00, u'B'};
+    const std::u16string malformedThenPair{0xd800, 0xd834, 0xdd1e, u'C'};
+    const std::u16string pairThenMalformed{0xd834, 0xdd1e, 0xdc00, u'D'};
 #ifdef GHC_RAISE_UNICODE_ERRORS
     CHECK_THROWS_AS(fs::detail::toUtf8(std::u16string(1, 0xd800)), fs::filesystem_error);
+    CHECK_THROWS_AS(fs::detail::toUtf8(highThenAscii), fs::filesystem_error);
+    CHECK_THROWS_AS(fs::detail::toUtf8(lowThenAscii), fs::filesystem_error);
+    CHECK_THROWS_AS(fs::detail::toUtf8(malformedThenPair), fs::filesystem_error);
+    CHECK_THROWS_AS(fs::detail::toUtf8(pairThenMalformed), fs::filesystem_error);
     CHECK_THROWS_AS(fs::detail::appendUTF8(t, 0x200000), fs::filesystem_error);
 #else
     CHECK(std::string("\xEF\xBF\xBD") == fs::detail::toUtf8(std::u16string(1, 0xd800)));
+    CHECK(std::string("\xEF\xBF\xBD" "A") == fs::detail::toUtf8(highThenAscii));
+    CHECK(std::string("\xEF\xBF\xBD" "B") == fs::detail::toUtf8(lowThenAscii));
+    CHECK(std::string("\xEF\xBF\xBD\xF0\x9D\x84\x9E" "C") == fs::detail::toUtf8(malformedThenPair));
+    CHECK(std::string("\xF0\x9D\x84\x9E\xEF\xBF\xBD" "D") == fs::detail::toUtf8(pairThenMalformed));
     fs::detail::appendUTF8(t, 0x200000);
     CHECK(std::string("\xEF\xBF\xBD") == t);
 #endif
@@ -489,6 +502,14 @@ TEST_CASE("fs.path.append - path appends", "[filesystem][path][fs.path.append]")
     CHECK(fs::path("c:") / "" == "c:");
     CHECK(fs::path("c:foo") / "/bar" == "c:/bar");
     CHECK(fs::path("c:foo") / "c:bar" == "c:foo/bar");
+    CHECK(fs::path(R"(\\server)") / "abc" == R"(\\server\abc)");
+    CHECK(fs::path(R"(\\server)") / "" == R"(\\server\)");
+    CHECK(fs::path(R"(\\server\)") / "abc" == R"(\\server\abc)");
+    CHECK(fs::path(R"(\\server\share)") / "abc" == R"(\\server\share\abc)");
+    CHECK(fs::path(R"(\\server)") / R"(\abc)" == R"(\\server\abc)");
+    CHECK(fs::path("c:") / "abc" == "c:abc");
+    CHECK(fs::path(R"(c:\)") / "abc" == R"(c:\abc)");
+    CHECK(fs::path(R"(\rooted)") / "abc" == R"(\rooted\abc)");
 #else
     CHECK(fs::path("foo") / "" == "foo/");
     CHECK(fs::path("foo") / "/bar" == "/bar");
@@ -817,6 +838,8 @@ TEST_CASE("fs.path.decompose - path decomposition", "[filesystem][path][fs.path.
 #else
     CHECK(fs::path("t:est.txt").stem() == "t:est");
 #endif
+    CHECK(fs::path("/foo/.").stem() == ".");
+    CHECK(fs::path("/foo/..").stem() == "..");
 
     // extension()
     CHECK(fs::path("/foo/bar.txt").extension() == ".txt");
@@ -825,6 +848,8 @@ TEST_CASE("fs.path.decompose - path decomposition", "[filesystem][path][fs.path.
     CHECK(fs::path(".bar").extension() == "");
     CHECK(fs::path("..bar").extension() == ".bar");
     CHECK(fs::path("t:est.txt").extension() == ".txt");
+    CHECK(fs::path("/foo/.").extension() == "");
+    CHECK(fs::path("/foo/..").extension() == "");
 
     if (has_host_root_name_support()) {
         // //host-based root-names
@@ -951,16 +976,29 @@ TEST_CASE("fs.path.gen - path generation", "[filesystem][path][fs.path.gen]")
     CHECK(fs::path("ab/cd/ef/../../qw").lexically_normal() == "ab/qw");
     CHECK(fs::path("a/b/../../../c").lexically_normal() == "../c");
     CHECK(fs::path("../").lexically_normal() == "..");
+    CHECK(fs::path("./../foo/../bar").lexically_normal() == "../bar");
+    CHECK(fs::path("./../foo/../../bar").lexically_normal() == "../../bar");
+    CHECK(fs::path("../../foo/../bar").lexically_normal() == "../../bar");
 #ifdef GHC_OS_WINDOWS
     CHECK(fs::path("\\/\\///\\/").lexically_normal() == "/");
     CHECK(fs::path("a/b/..\\//..///\\/../c\\\\/").lexically_normal() == "../c/");
     CHECK(fs::path("..a/b/..\\//..///\\/../c\\\\/").lexically_normal() == "../c/");
     CHECK(fs::path("..\\").lexically_normal() == "..");
+    CHECK(fs::path("//?/UNC/::1/c$/foo").lexically_normal() == R"(\\?\UNC\::1\c$\foo)");
+    CHECK(fs::path(R"(\\?\UNC\a::1\c$\foo)").lexically_normal() == R"(\\?\UNC\a::1\c$\foo)");
+    CHECK(fs::path(R"(\\?\UNC\fe80::1\c$\foo)").lexically_normal() == R"(\\?\UNC\fe80::1\c$\foo)");
+    CHECK(fs::path(R"(\\?\UNC\server\share\foo)").lexically_normal() == R"(\\?\UNC\server\share\foo)");
+    CHECK(fs::path(R"(\\server\share\foo)").lexically_normal() == R"(\\server\share\foo)");
+    CHECK(fs::path(R"(C:foo\..\bar)").lexically_normal() == R"(C:bar)");
 #endif
 
     // lexically_relative()
     CHECK(fs::path("/a/d").lexically_relative("/a/b/c") == "../../d");
     CHECK(fs::path("/a/b/c").lexically_relative("/a/d") == "../b/c");
+    CHECK(fs::path("/a/b/c").lexically_relative("/a/b/c/d/..") == ".");
+    CHECK(fs::path("/a/b/c/").lexically_relative("/a/b/c/d/..") == ".");
+    CHECK(fs::path("").lexically_relative("/a/..") == "");
+    CHECK(fs::path("").lexically_relative("a/..") == ".");
     CHECK(fs::path("a/b/c").lexically_relative("a") == "b/c");
     CHECK(fs::path("a/b/c").lexically_relative("a/b/c/x/y") == "../..");
     CHECK(fs::path("a/b/c").lexically_relative("a/b/c") == ".");
@@ -1208,6 +1246,13 @@ TEST_CASE("fs.class.filesystem_error - class filesystem_error", "[filesystem][fi
     CHECK(!std::string(fse.what()).empty());
     CHECK(fse.path1() == "foo/bar");
     CHECK(fse.path2() == "some/other");
+#if defined(GHC_OS_WINDOWS) && !defined(USE_STD_FS) && !defined(GHC_FILESYSTEM_FWD_TEST)
+    CHECK_FALSE(fs::detail::systemErrorText(ERROR_FILE_NOT_FOUND).empty());
+    const DWORD unknownError = 0xffffffffu;
+    const auto unknownErrorText = fs::detail::systemErrorText(unknownError);
+    CHECK_FALSE(unknownErrorText.empty());
+    CHECK(unknownErrorText.find(std::to_string(unknownError)) != std::string::npos);
+#endif
 }
 
 static constexpr fs::perms constExprOwnerAll()
@@ -1648,6 +1693,21 @@ TEST_CASE("fs.class.rec.dir.itr - class recursive_directory_iterator", "[filesys
         }
         CHECK(os.str() == "d2/b,d2/ds1,d2/ds2,");
     }
+    if (is_symlink_creation_supported()) {
+        TemporaryDirectory t(TempOpt::change_path);
+        generateFile("regular");
+        fs::create_symlink("self", "self");
+        std::multiset<std::string> result;
+        REQUIRE_NOTHROW([&]() {
+            for (const auto& de : fs::recursive_directory_iterator(".")) {
+                result.insert(de.path().generic_string());
+            }
+        }());
+        CHECK(result.size() == 2);
+        CHECK(result.count("./regular") == 1);
+        CHECK(result.count("./self") == 1);
+        CHECK(fs::remove("self"));
+    }
 }
 
 TEST_CASE("fs.op.absolute - absolute", "[filesystem][operations][fs.op.absolute]")
@@ -1787,8 +1847,11 @@ TEST_CASE("fs.op.copy_file - copy_file", "[filesystem][operations][fs.op.copy_fi
     CHECK(fs::file_size("foo") == fs::file_size("bar"));
     CHECK(fs::copy_file("foo", "bar2", ec));
     CHECK(!ec);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
     generateFile("foo2", 200);
+    const auto copyTime = fs::file_time_type(std::chrono::seconds(1445401800));
+    fs::last_write_time("foo", copyTime);
+    fs::last_write_time("bar", copyTime + std::chrono::milliseconds(100));
+    fs::last_write_time("foo2", copyTime + std::chrono::milliseconds(200));
     CHECK(fs::copy_file("foo2", "bar", fs::copy_options::update_existing));
     CHECK(fs::file_size("bar") == 200);
     CHECK(!fs::copy_file("foo", "bar", fs::copy_options::update_existing));
@@ -1799,6 +1862,24 @@ TEST_CASE("fs.op.copy_file - copy_file", "[filesystem][operations][fs.op.copy_fi
     CHECK_NOTHROW(fs::copy_file("foobar", "foobar2", ec));
     CHECK(ec);
     CHECK(!fs::exists("foobar"));
+    CHECK(!fs::exists("foobar2"));
+
+    fs::create_directory("source_dir");
+    CHECK_FALSE(fs::copy_file("source_dir", "dir_copy", ec));
+    CHECK(ec);
+    CHECK_FALSE(fs::exists("dir_copy"));
+    CHECK_THROWS_AS(fs::copy_file("source_dir", "dir_copy"), fs::filesystem_error);
+    CHECK_FALSE(fs::exists("dir_copy"));
+
+#if !defined(GHC_OS_WINDOWS) && !defined(GHC_OS_WEB)
+    REQUIRE(::mkfifo("source_fifo", 0644) == 0);
+    CHECK_FALSE(fs::copy_file("source_fifo", "fifo_copy", ec));
+    CHECK(ec);
+    CHECK_FALSE(fs::exists("fifo_copy"));
+    CHECK_THROWS_AS(fs::copy_file("source_fifo", "fifo_copy"), fs::filesystem_error);
+    CHECK_FALSE(fs::exists("fifo_copy"));
+#endif
+
     fs::path file1("temp1.txt");
     fs::path file2("temp2.txt");
     generateFile(file1, 200);
@@ -1812,6 +1893,10 @@ TEST_CASE("fs.op.copy_file - copy_file", "[filesystem][operations][fs.op.copy_fi
     CHECK((fs::status(file2).permissions() & fs::perms::owner_write) != fs::perms::owner_write);
     CHECK_NOTHROW(fs::permissions(file1, allWrite, fs::perm_options::add));
     CHECK_NOTHROW(fs::permissions(file2, allWrite, fs::perm_options::add));
+
+    ec = std::make_error_code(std::errc::invalid_argument);
+    CHECK(fs::copy_file("foo", "bar3", ec));
+    CHECK(!ec);
 }
 
 TEST_CASE("fs.op.copy_symlink - copy_symlink", "[filesystem][operations][fs.op.copy_symlink]")
@@ -2016,6 +2101,17 @@ TEST_CASE("fs.op.equivalent - equivalent", "[filesystem][operations][fs.op.equiv
         CHECK(fs::equivalent("foo", "foo2"));
         CHECK(fs::equivalent("foo", "foo2", ec));
         CHECK(!ec);
+    }
+    fs::create_hard_link("foo", "foo-hard-link");
+    CHECK(fs::equivalent("foo", "foo-hard-link"));
+    generateFile("foo-hard-link", 4321);
+    CHECK(fs::file_size("foo") == 4321);
+    CHECK(fs::equivalent("foo", "foo-hard-link"));
+    std::error_code mutationEc(42, std::system_category());
+    CHECK(fs::equivalent("foo", "foo-hard-link", mutationEc));
+    CHECK(!mutationEc);
+    if (is_symlink_creation_supported()) {
+        CHECK(fs::equivalent("foo", "foo2"));
     }
 #ifdef TEST_LWG_2937_BEHAVIOUR
     INFO("This test expects LWG #2937 result conformance.");
@@ -2513,6 +2609,30 @@ TEST_CASE("fs.op.last_write_time - last_write_time", "[filesystem][operations][f
     CHECK_NOTHROW(fs::last_write_time("foo", nt, ec));
     CHECK(std::abs(std::chrono::duration_cast<std::chrono::seconds>(fs::last_write_time("foo") - nt).count()) < 1);
     CHECK(!ec);
+    const auto preciseTime = nt + std::chrono::milliseconds(123);
+    CHECK_NOTHROW(fs::last_write_time("foo", preciseTime, ec));
+    REQUIRE(!ec);
+    CHECK(std::abs(std::chrono::duration_cast<std::chrono::nanoseconds>(fs::last_write_time("foo") - preciseTime).count()) < 1000000);
+    const fs::directory_entry preciseEntry("foo");
+    CHECK(std::abs(std::chrono::duration_cast<std::chrono::nanoseconds>(preciseEntry.last_write_time() - preciseTime).count()) < 1000000);
+    if (is_symlink_creation_supported()) {
+#if !defined(GHC_OS_WINDOWS) && !defined(GHC_OS_WEB)
+        struct ::stat linkStatBefore;
+        REQUIRE(::lstat("foo2", &linkStatBefore) == 0);
+#endif
+        nt = timeFromString("2015-10-21T04:28:00");
+        CHECK_NOTHROW(fs::last_write_time("foo2", nt));
+        CHECK(std::abs(std::chrono::duration_cast<std::chrono::seconds>(fs::last_write_time("foo") - nt).count()) < 1);
+        nt = timeFromString("2015-10-21T04:27:00");
+        CHECK_NOTHROW(fs::last_write_time("foo2", nt, ec));
+        CHECK(!ec);
+        CHECK(std::abs(std::chrono::duration_cast<std::chrono::seconds>(fs::last_write_time("foo") - nt).count()) < 1);
+#if !defined(GHC_OS_WINDOWS) && !defined(GHC_OS_WEB)
+        struct ::stat linkStatAfter;
+        REQUIRE(::lstat("foo2", &linkStatAfter) == 0);
+        CHECK(linkStatAfter.st_mtime == linkStatBefore.st_mtime);
+#endif
+    }
     CHECK_THROWS_AS(fs::last_write_time("bar", nt), fs::filesystem_error);
     CHECK_NOTHROW(fs::last_write_time("bar", nt, ec));
     CHECK(ec);
@@ -2836,6 +2956,24 @@ TEST_CASE("fs.op.weakly_canonical - weakly_canonical", "[filesystem][operations]
         CHECK(fs::weakly_canonical(rel / "d1/../f0") == dir / "f0");
         CHECK(fs::weakly_canonical(rel / "d1/../f1") == dir / "f1");
         CHECK(fs::weakly_canonical(rel / "d1/../f1/../f2") == dir / "f2");
+
+        std::error_code ec(42, std::system_category());
+        CHECK(fs::weakly_canonical(dir / "missing/child", ec) == dir / "missing/child");
+        CHECK(!ec);
+
+        const auto invalid = dir / std::string(1024, 'x');
+        std::error_code lookupError;
+        CHECK_FALSE(fs::exists(invalid, lookupError));
+#ifndef GHC_OS_WINDOWS
+        REQUIRE(lookupError);
+#endif
+        if (lookupError) {
+            CHECK(fs::weakly_canonical(invalid, ec).empty());
+            CHECK(ec == lookupError);
+#ifdef GHC_WITH_EXCEPTIONS
+            CHECK_THROWS_AS(fs::weakly_canonical(invalid), fs::filesystem_error);
+#endif
+        }
     }
 }
 
@@ -2919,6 +3057,14 @@ TEST_CASE("Windows: path namespace handling", "[filesystem][path][fs.path.win.na
         auto p2 = fs::canonical(p, ec);
         CHECK(!ec);
         CHECK(p2 == p);
+
+        auto p3 = fs::canonical(R"(\\.\UNC\localhost\c$\Windows)", ec);
+        CHECK(!ec);
+        CHECK(p3 == p);
+
+        auto p4 = fs::canonical(R"(\\?\UNC\localhost\c$\Windows)", ec);
+        CHECK(!ec);
+        CHECK(p4 == p);
     }
     
     struct TestInfo

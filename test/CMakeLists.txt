@@ -3,6 +3,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 set(PARSE_CATCH_TESTS_ADD_TO_CONFIGURE_DEPENDS ON)
 include(ParseAndAddCatchTests)
 
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND UNIX AND NOT APPLE AND NOT BSD)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
+endif()
+
 function(SetTestCompileOptions target_name)
     target_compile_options(${target_name} PRIVATE
         $<$<BOOL:${EMSCRIPTEN}>:-s DISABLE_EXCEPTION_CATCHING=0>
@@ -92,9 +97,23 @@ if(CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 endif()
 add_test(fwd_impl_test fwd_impl_test)
 
+if(GHC_FILESYSTEM_BUILD_STD_TESTING)
+    AddExecutableWithStdFS(fs_std_header_test fs_std_header_test.cpp fs_std_fwd_header_test.cpp)
+    if(TARGET fs_std_header_test)
+        target_link_libraries(fs_std_header_test ghc_filesystem)
+        SetTestCompileOptions(fs_std_header_test)
+        add_test(fs_std_header_test fs_std_header_test)
+    endif()
+endif()
+
 add_executable(exception exception.cpp)
-if(NOT MSVC)
+if(MSVC)
+    # MSVC 2015 warns for noexcept declarations when exception handling is disabled.
+    target_compile_options(exception PRIVATE /EHs-c- /wd4577)
+    target_compile_definitions(exception PRIVATE _HAS_EXCEPTIONS=0)
+else()
     target_compile_options(exception PRIVATE -fno-exceptions)
 endif()
 target_include_directories(exception PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 SetTestCompileOptions(exception)
+add_test(NAME no_exception_test COMMAND exception "${CMAKE_CURRENT_SOURCE_DIR}/exception.cpp")
